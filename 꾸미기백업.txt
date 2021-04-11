@@ -1,0 +1,719 @@
+// win32 Visual C 컴파일시 추가
+// 프로그램 가장 첫 줄에 추가할 것
+#define _CRT_SECURE_NO_WARNINGS
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <ctype.h>
+#include <string.h>
+#include <conio.h>
+#include <windows.h>
+
+/* for oracle */
+#include <sqlda.h>
+#include <sqlca.h>
+#include <sqlcpr.h>
+
+void DB_connect();				//디비 연결
+void sql_error(char *msg);		//sql_error
+
+void patient();					//환자 로그인시
+void doctor();					//의사 로그인시
+void manager();					//관리자 로그인시
+
+//-------------------------------------------------------------[꾸미기]
+void textcolor(int foreground, int background);
+void main_window();
+
+//----------------------------------------------------------관리자
+void dSelect();					//의사 select 조회
+void dInsert();					//의사 insert
+void dDelete();					//의사 delete
+void dUpdate();					//의사 update
+void main_window();
+void pSelect();					//환자 select 조회
+void pInsert();					//환자 insert
+void pDelete();					//환자 delete
+void pUpdate();					//환자 update
+//---------------------------------------------------------초기화
+int DoctorInit();				//의사 초기화
+int PatientInit();				//환자 초기화
+
+EXEC SQL BEGIN DECLARE SECTION;
+   VARCHAR uid[80];
+   VARCHAR pwd[20];
+   char doc_name[10];
+   char doc_id[15];
+   char hosp[20];
+   char doc_age[20];
+   int lic;
+
+   short idoc_name;
+   short idoc_id;
+   short ihosp;
+   short idoc_age;
+   short ilic;
+EXEC SQL END DECLARE SECTION;
+
+int DoctorInit(void){
+   strcpy(doc_name,"");
+   strcpy(doc_id,"");
+   strcpy(hosp,"");
+   strcpy(doc_age,"");
+   lic =0;
+   
+   idoc_name=0;
+   idoc_id=0;
+   ihosp=0;
+   idoc_age=0;
+   ilic =0;
+   return 0;
+}
+
+EXEC SQL BEGIN DECLARE SECTION;
+   char pat_name[10];
+   char pat_id[15];
+   char pat_sex[6];
+   char pat_age[20];
+   char doc_id[15];
+
+   short ipat_name;
+   short ipat_id;
+   short ipat_sex;
+   short ipat_age;
+   short idoc_id;
+EXEC SQL END DECLARE SECTION;
+
+//--
+int PatientInit(void){
+   strcpy(pat_name,"");
+   strcpy(pat_id,"");
+   strcpy(pat_sex,"");
+   strcpy(pat_age,"");
+   strcpy(doc_id,"");
+   
+   ipat_name=0;
+   ipat_id=0;
+   ipat_sex=0;
+   ipat_age=0;
+   idoc_id =0;
+   return 0;
+}
+
+#define getch()  _getch()
+
+
+void textcolor(int foreground, int background)   // ------------------콘솔창 색 설정
+{ 
+   int color=foreground+background*16; 
+   SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), color); 
+}
+
+//-----------------------------Decorate----------------------------------------------
+void main_window(){
+   textcolor(10, 15);
+   printf(" __________________________________________________________________________________________________\n");
+   printf("|                                                                                                  |\n");  
+   printf("|    #   #   #####       #       #       #####   #   #     #####       #       #####    #####      |");	textcolor(12, 15);printf("\t ■■\t\t ");textcolor(10, 15);
+   printf("|    #   #   #          # #      #         #     #   #    #           # #      #    #   #          |");	textcolor(12, 15);printf("\t ■■\t\t ");textcolor(10, 15);
+   printf("|    #####   #####     #   #     #         #     #####   #           #   #     #####    #####      |");	textcolor(12, 15);printf(" ■■■■■■\t\t");textcolor(10, 15);
+   printf("|    #   #   #        #######    #         #     #   #    #         #######    #    #   #          |");  textcolor(12, 15);printf(" ■■■■■■\t\t");textcolor(10, 15);
+   printf("|    #   #   #####   #       #   #####     #     #   #     #####   #       #   #    #   #####      |");  textcolor(12, 15);printf("\t ■■\t\t ");textcolor(10, 15);
+   printf("|__________________________________________________________________________________________________|");  textcolor(12, 15);printf("\t ■■\t\t ");textcolor(10, 15);
+   textcolor(0, 15);	//나머지 출력문은  흰 바탕에 검은색으로 출력한다.
+}
+
+
+//---------------------------------------[ MAIN ]-------------------------------------------
+void main() {
+
+   DB_connect();
+   int user = 0;
+   while(user!=4){
+      system( "cls" );		//화면clear
+	  main_window();		//꾸미기
+      printf("\n \t\t\t\t-----------선택하세요---------------");
+      printf("\n \t\t\t[1]. 환자  [2].의사  [3].관리자  [4].프로그램 종료 : ");
+      scanf("%d",&user);
+
+      switch(user){
+         case 1:
+            patient();
+            break;
+         case 2:
+            doctor();
+            break;
+         case 3:
+            manager();
+            break;
+         case 4:
+         printf("\n\t\t\t 곧 프로그램이 종료 됩니다...");
+         Sleep(3000);
+            break;
+         default : 
+            printf("\n 잘못된 입력 ...다시 입력하세요!!!\n");
+            break;
+      }
+   }
+}
+
+
+//-------------------------------------------------[환자]---------------------------------------------------
+void patient(){
+   system( "cls" );		//화면clear
+   main_window();		//꾸미기
+   int select = 0;
+   
+   while (select != 4) {
+		  system( "cls" );		//화면clear
+		  main_window();		//꾸미기
+		  printf("\n------------------\n");
+		  printf("환자 접속입니다.\n");
+		  printf("\n 메뉴를 선택하세요\n");
+		  printf("1. 건강기록 작성 \n2.진료받은기록\n3.셀프체크\n4.뒤로\n\n\n");
+		  scanf("%d", &select);
+		  switch (select){
+			 case 1:
+				system( "cls" );		//화면clear
+				main_window();		//꾸미기
+				printf("건강기록 작성\n");
+				Sleep(1000);
+				break;
+			  case 2:
+				system( "cls" );		//화면clear
+				main_window();		//꾸미기
+				printf("진료받은 기록\n");
+				Sleep(1000);
+				break;
+			  case 3:
+				system( "cls" );		//화면clear
+				main_window();		//꾸미기
+				printf("셀프체크\n");     
+				Sleep(1000);
+				break;
+			  case 4:
+				printf("뒤로\n");
+				return; 
+				break;      
+			  default:
+				printf("다시입력하세요\n");
+				Sleep(1000);
+				break;      
+		  }
+   }
+}
+
+//-------------------------------------------------[의사]---------------------------------------------------
+void doctor(){
+   system( "cls" );
+   main_window();		//꾸미기
+   int select = 0;
+   while (select != 4) {
+		system( "cls" );		//화면clear
+		main_window();		//꾸미기
+		printf("\n------------------\n");
+		printf("의사 접속입니다.\n");
+		printf("\n 메뉴를 선택하세요\n");
+		printf("\n1.담당환자 목록\n2.진료기록 작성\n3.환자정보보기\n4.뒤로\n\n\n");
+		scanf("%d", &select);
+		switch (select){
+         case 1:
+			system( "cls" );		//화면clear
+			main_window();		//꾸미기
+            printf("담당환자 목록\n");
+			Sleep(1000);
+            break;
+         case 2:
+			system( "cls" );		//화면clear
+			main_window();		//꾸미기
+            printf("진료기록 작성\n");
+			Sleep(1000);
+            break;
+         case 3:
+			system( "cls" );		//화면clear
+			main_window();		//꾸미기
+            printf("환자정보보기\n");
+			Sleep(1000);
+            break;
+         case 4:
+			system( "cls" );		//화면clear
+			main_window();		//꾸미기
+            printf("뒤로\n");
+            break;      
+         default:
+            printf("다시입력하세요\n");
+            break;      
+		}
+   }
+}
+
+//-------------------------------------------------[관리자]---------------------------------------------------
+
+void manager(){
+   int select = 0;
+   int select_manage =0;
+   system( "cls" );
+   main_window();		//꾸미기
+   printf("\n관리자 접속입니다.\n");
+   printf("관리대상을 선택하세요 [1]의사 [2]환자 : ");
+   scanf("%d",&select_manage);
+   switch(select_manage){
+	case 1:
+	   while (select != 5) {
+			system( "cls" );
+			main_window();		//꾸미기
+			printf("\n------------------\n");
+			printf("의사 관리 접속입니다.\n");
+			printf("\n 메뉴를 선택하세요[의사 관리]\n");
+			printf("\n1.조회하기\n2.수정하기\n3.삽입\n4.삭제\n5.뒤로\n\n\n");
+
+			scanf("%d", &select);
+			switch (select){
+				case 1:					//조회
+					system( "cls" );		//화면clear
+					main_window();		//꾸미기
+					printf("조회\n");
+					dSelect();
+					getch();
+					break;
+				case 2:					//수정
+					system( "cls" );		//화면clear
+					main_window();		//꾸미기
+					printf("수정\n");
+					dUpdate();
+					getch();
+					break;
+				case 3:					//삽입
+					system( "cls" );		//화면clear
+					main_window();		//꾸미기
+					printf("삽입\n");
+					dInsert();
+					getch();
+					break;
+				case 4:					//삭제
+					system( "cls" );		//화면clear
+					main_window();		//꾸미기
+					printf("삭제\n");
+					dDelete();
+					getch();
+					break;      
+				case 5:
+					printf("뒤로\n");
+				default:
+					printf("다시입력하세요\n");
+					break;      
+			}
+	   }break;
+	case 2:
+		while (select != 5) {
+			system( "cls" );
+			main_window();		//꾸미기
+			printf("\n------------------\n");
+			printf("환자 관리 접속입니다.\n");
+			printf("\n 메뉴를 선택하세요[환자 관리]\n");
+			printf("\n1.조회하기\n2.수정하기\n3.삽입\n4.삭제\n5.뒤로\n\n\n");
+
+			scanf("%d", &select);
+			switch (select){
+				case 1:					//조회
+					system( "cls" );		//화면clear
+					main_window();		//꾸미기
+					printf("조회\n");
+					pSelect();
+					getch();
+					break;
+				case 2:					//수정
+					system( "cls" );		//화면clear
+					main_window();		//꾸미기
+					printf("수정\n");
+					pUpdate();
+					getch();
+					break;
+				case 3:					//삽입
+					system( "cls" );		//화면clear
+					main_window();		//꾸미기
+					printf("삽입\n");
+					pInsert();
+					getch();
+					break;
+				case 4:					//삭제
+					system( "cls" );		//화면clear
+					main_window();		//꾸미기
+					printf("삭제\n");
+					pDelete();
+					getch();
+					break;      
+				case 5:
+					printf("뒤로\n");
+					break;
+				default:
+					printf("다시입력하세요\n");
+					break;      
+			}
+	   }
+	   break;
+	default :
+		break;
+   }
+}
+
+
+
+void dSelect(){//-------------------------------------------------관리자가 의사 조회
+   //char sid[10];//값 비교를 위한 구문
+   printf("찾고자하는 의사의 아이디를 입력하세요");
+  
+   scanf("%s",&doc_id);
+   printf("%s",doc_id);
+   EXEC SQL select doctor_id, doctor_name, hospital, doctor_age, license into :doc_id, :doc_name, :hosp, :doc_age, :lic 
+   from doctor where doctor_id = :doc_id;
+   
+   printf("\n print Table Doctor \n");
+   printf("\n 의사 아이디 : %s  \n 의사 이름 : %s \n 소속병원 : %s \n 생년월일 : %s \n 의사면허 : %d", doc_id, doc_name, hosp, doc_age, lic);
+}
+
+void dInsert(){//-------------------------------------------------관리자가 의사 삽입
+
+   char insert_id[15] = "no insert";
+   char insert_name[10]= "no insert";
+   char insert_age[10]= "no insert";
+   char insert_hosp[20]= "no insert";
+   int insert_lic = 0;
+
+   DoctorInit();
+   printf("\n삽입하고자 하는 의사의 아이디를 입력하세요\n");
+   scanf("%s", &insert_id);
+   strcpy(doc_id,insert_id);
+   printf("\n삽입하고자 하는 의사의 이름을 입력하세요\n");
+   scanf("%s", &insert_name);
+   strcpy(doc_name,insert_name);
+   printf("\n삽입하고자 하는 의사의 소속병원을 입력하세요\n");
+   scanf("%s", &insert_hosp);
+   strcpy(hosp,insert_hosp);
+   printf("\n삽입하고자 하는 의사의 생년월일을 입력하세요\n");   
+   scanf("%s", &insert_age);
+   strcpy(doc_age,insert_age);
+   printf("\n삽입하고자 하는 의사의 라이센스를 입력하세요\n");
+   scanf("%d",&insert_lic);
+   lic = insert_lic;
+
+   printf("\n 아이디 : %s \n 이름 : %s \n 소속병원 : %s \n 생년월일 : %s \n 라이센스 : %d \n",doc_id,doc_name,hosp,doc_age,lic);
+   EXEC SQL insert into DOCTOR(
+         doctor_id, doctor_name, hospital, doctor_age, license
+      )
+      VALUES(
+         :doc_id:idoc_id,
+         :doc_name:idoc_name,
+         :hosp:ihosp,
+         :doc_age:idoc_age,
+         :lic:ilic
+      );
+   printf("sql 입력중\n");
+   EXEC SQL COMMIT WORK;
+   printf("삽입에 성공하였습니다!\n");
+}
+
+void dDelete(){//-------------------------------------------------관리자가 의사 삭제
+   char yes_or_no;      //참거짓 판별
+   
+   char insert_id[15] = "no insert";
+   char insert_name[10]= "no insert";
+   char insert_age[10]= "no insert";
+   char insert_hosp[20]= "no insert";
+   int insert_lic = 0;
+
+   DoctorInit();
+   printf("\n삭제하고자 하는 의사의 아이디를 입력하세요\n");
+   scanf("%s", &insert_id);
+   strcpy(doc_id,insert_id);
+   EXEC SQL select doctor_id, doctor_name, hospital, doctor_age, license into :doc_id, :doc_name, :hosp, :doc_age, :lic 
+   from doctor where doctor_id = :doc_id;
+   printf("\n 삭제전 확인 \n");
+   printf("\n 의사 아이디 : %s  \n 의사 이름 : %s \n 소속병원 : %s \n 생년월일 : %s \n 의사면허 : %d", doc_id, doc_name, hosp, doc_age, lic);
+   printf("\n 정말 [ %s]님의 정보를 삭제합니까?(Y or N) :",doc_name);
+   scanf("%*c%c",&yes_or_no);
+   switch(yes_or_no)
+   {
+      case 'y' :
+         EXEC SQL delete from DOCTOR
+         where doctor_id = :doc_id;
+         printf("sql 입력중\n");
+         EXEC SQL COMMIT WORK;
+         printf("\n삭제에 성공하였습니다!\n");
+         break;
+      case 'Y' :
+         EXEC SQL delete from DOCTOR
+         where doctor_id = :doc_id;
+         printf("sql 입력중\n");
+         EXEC SQL COMMIT WORK;
+         printf("\n삭제에 성공하였습니다!\n");
+         break;
+      case 'n':
+         printf("\n삭제를 취소하였습니다!\n");
+         break;
+      case 'N':
+         printf("\n삭제를 취소하였습니다!\n");
+         break;
+      default :
+         printf("\n잘못 입력하였습니다!\n");
+         break;
+   }
+}
+
+void dUpdate(){//-------------------------------------------------관리자가 의사 수정
+   int update_menu = 1;
+   char update_id[15] = "no update";
+   char update_name[10]= "no update";
+   char update_age[10]= "no update";
+   char update_hosp[20]= "no update";
+   int update_lic = 0;
+
+   DoctorInit();												//변수 초기화
+   printf("\n수정을 할 데이터를 가지는 의사의 아이디를 입력하세요\n");
+   scanf("%s", &update_id);
+   strcpy(doc_id,update_id);
+   EXEC SQL select doctor_id, doctor_name, hospital, doctor_age, license into :doc_id, :doc_name, :hosp, :doc_age, :lic 
+   from doctor where doctor_id = :doc_id;
+   printf("\n 수정 전 확인 \n");
+   printf("\n 의사 아이디 : %s  \n [1]의사 이름 : %s \n [2]소속병원 : %s \n [3]생년월일 : %s \n [4]의사면허 : %d \n 모두 수정하면 [0]\n", doc_id, doc_name, hosp, doc_age, lic);
+
+   while(update_menu != 0){
+	printf("\n수정할 영역 선택 :");
+	scanf("%d",&update_menu);
+	switch (update_menu){
+		case 0:
+			break;
+		case 1:
+			printf("\n수정할 의사이름을 입력하세요 :");
+			scanf("%*c%s", &update_name);
+			strcpy(doc_name,update_name);
+			break;
+		case 2:
+			printf("\n수정할 소속병원을 입력하세요 :");
+			scanf("%s", &update_hosp);
+			strcpy(hosp,update_hosp);
+			break;
+		case 3:
+			printf("\n수정할 생년월일을 입력하세요 :");
+			scanf("%s", &update_age);
+			strcpy(doc_age,update_age);
+			break;
+		case 4:
+			printf("\n수정할 라이센스번호을 입력하세요 :");
+			scanf("%d", &update_lic);
+			lic = update_lic;
+			break;
+		default : 
+			break;
+	}	
+   }
+   
+	EXEC SQL
+		UPDATE 
+			DOCTOR
+		SET
+			doctor_name = :doc_name:idoc_name,
+			hospital = :hosp:ihosp,
+			doctor_age = :doc_age:idoc_age,
+			license = :lic:ilic	
+		WHERE
+			doctor_id = :doc_id;
+	EXEC SQL COMMIT WORK;
+	printf("\n수정 완료!\n");
+}
+//-----------------------------------------------------------------------------------------------------------
+void pSelect(){//-------------------------------------------------관리자가 환자 조회
+	printf("환자조회\n");
+	//char sid[10];//값 비교를 위한 구문
+   printf("찾고자하는 환자의 아이디를 입력하세요");
+  
+   scanf("%s",&pat_id);
+   printf("%s",pat_id);
+   EXEC SQL select patient_id, patient_name, patient_sex, patient_age, doctor_id into :pat_id, :pat_name, :pat_sex, :pat_age, :doc_id 
+   from patient where patient_id = :pat_id;
+   
+   printf("\n print Table Patient \n");
+   printf("\n 환자 아이디 : %s  \n 환자 이름 : %s \n 환자성별 : %s \n 생년월일 : %s \n 담당의사아이디 : %s", pat_id, pat_name, pat_sex, pat_age, doc_id);
+}
+
+void pInsert(){//-------------------------------------------------관리자가 환자 삽입
+	char insert_pat_id[15] = "no insert";
+	char insert_name[10]= "no insert";
+	char insert_sex[6]= "no";
+	char insert_age[10]= "no insert";
+	char insert_doc_id[15] = "no insert";
+
+	printf("\n------환자 삽입------\n");
+	PatientInit();
+	printf("\n삽입하고자 하는 환자의 아이디를 입력하세요\n");
+	scanf("%s", &insert_pat_id);
+	strcpy(pat_id,insert_pat_id);
+	printf("\n삽입하고자 하는 환자의 이름을 입력하세요\n");
+	scanf("%s", &insert_name);
+	strcpy(pat_name,insert_name);
+	printf("\n삽입하고자 하는 환자의 환자성별을 입력하세요\n");
+	scanf("%s", &insert_sex);
+	strcpy(pat_sex,insert_sex);
+	printf("\n삽입하고자 하는 환자의 생년월일을 입력하세요\n");   
+	scanf("%s", &insert_age);
+	strcpy(pat_age,insert_age);
+	printf("\n삽입하고자 하는 담당의사의 아이디를 입력하세요\n");
+	scanf("%s",&insert_doc_id);
+	strcpy(doc_id,insert_doc_id);
+
+	printf("\n 아이디 : %s \n 이름 : %s \n 환자성별 : %s \n 생년월일 : %s \n 담당의사 : %s \n",pat_id,pat_name,pat_sex,pat_age,doc_id);
+	EXEC SQL insert into patient(
+		patient_id, patient_name, patient_sex, patient_age, doctor_id
+    )
+    VALUES(
+		:pat_id:ipat_id,
+        :pat_name:ipat_name,
+        :pat_sex:ipat_sex,
+        :pat_age:ipat_age,
+        :doc_id:idoc_id
+		);
+	printf("sql 입력중\n");
+	EXEC SQL COMMIT WORK;
+	printf("삽입에 성공하였습니다!\n");
+}
+
+void pDelete(){//-------------------------------------------------관리자가 환자 삭제
+	printf("환자삭제\n");
+	char yes_or_no;      //참거짓 판별
+   
+	char insert_pat_id[15] = "no insert";
+	char insert_name[10]= "no insert";
+	char insert_sex[6]= "no";
+	char insert_age[10]= "no insert";
+	char insert_doc_id[15] = "no insert";
+
+	PatientInit();
+
+   printf("\n삭제하고자 하는 환자의 아이디를 입력하세요\n");
+   scanf("%s", &insert_pat_id);
+   strcpy(pat_id,insert_pat_id);
+   EXEC SQL select patient_id, patient_name, patient_sex, patient_age, doctor_id into :pat_id, :pat_name, :pat_sex, :pat_age, :doc_id
+   from patient where patient_id = :pat_id;
+   printf("\n 삭제전 확인 \n");
+   printf("\n 환자 아이디 : %s  \n 환자 이름 : %s \n 환자 성별 : %s \n 환자 생년월일 : %s \n 담당의사 아이디 : %s", pat_id, pat_name, pat_sex, pat_age, doc_id);
+   printf("\n 정말 [ %s]님의 정보를 삭제합니까?(Y or N) :",pat_name);
+   scanf("%*c%c",&yes_or_no);
+   switch(yes_or_no)
+   {
+      case 'y' :
+         EXEC SQL delete from PATIENT
+         where patient_id = :pat_id;
+         printf("sql 입력중\n");
+         EXEC SQL COMMIT WORK;
+         printf("\n삭제에 성공하였습니다!\n");
+         break;
+      case 'Y' :
+         EXEC SQL delete from PATIENT
+         where patient_id = :pat_id;
+         printf("sql 입력중\n");
+         EXEC SQL COMMIT WORK;
+         printf("\n삭제에 성공하였습니다!\n");
+         break;
+      case 'n':
+         printf("\n삭제를 취소하였습니다!\n");
+         break;
+      case 'N':
+         printf("\n삭제를 취소하였습니다!\n");
+         break;
+      default :
+         printf("\n잘못 입력하였습니다!\n");
+         break;
+   }
+}
+
+void pUpdate(){//-------------------------------------------------관리자가 환자 수정
+	
+	int update_menu = 1;
+	char update_pat_id[15] = "no insert";
+	char update_name[10]= "no insert";
+	char update_sex[6]= "no";
+	char update_age[10]= "no insert";
+	char update_doc_id[15] = "no insert";
+
+	PatientInit();												//변수 초기화
+	printf("\n수정을 할 데이터를 가지는 의사의 아이디를 입력하세요\n");
+	scanf("%s", &update_pat_id);
+	strcpy(pat_id,update_pat_id);
+	EXEC SQL select patient_id, patient_name, patient_sex, patient_age, doctor_id into :pat_id, :pat_name, :pat_sex, :pat_age, :doc_id
+	from patient where patient_id = :pat_id;
+	printf("\n 수정 전 확인 \n");
+	printf("\n 환자 아이디 : %s  \n [1]환자 이름 : %s \n [2]환자 성별 : %s \n [3]환자 생년월일 : %s \n [4]담당의사 번호 : %s \n 모두 선택하면 [0]을 눌러 종료\n", pat_id, pat_name, pat_sex, pat_age, doc_id);
+
+	while(update_menu != 0){
+		printf("\n수정할 영역 선택 :");
+		scanf("%d",&update_menu);
+		switch (update_menu){
+			case 0:
+				break;
+			case 1:
+				printf("\n수정할 환자이름을 입력하세요 :");
+				scanf("%*c%s", &update_name);
+				strcpy(pat_name,update_name);
+				break;
+			case 2:
+				printf("\n수정할 환자 성별을 입력하세요 :");
+				scanf("%s", &update_sex);
+				strcpy(pat_sex,update_sex);
+				break;
+			case 3:
+				printf("\n수정할 생년월일을 입력하세요 :");
+				scanf("%s", &update_age);
+				strcpy(pat_age,update_age);
+				break;
+			case 4:
+				printf("\n수정할 담당환자번호을 입력하세요 :");
+				scanf("%s", &update_doc_id);
+				strcpy(doc_id,update_doc_id);
+				break;
+			default : 
+				break;
+			}	
+	}
+	EXEC SQL
+		UPDATE 
+			PATIENT
+		SET
+			patient_name = :pat_name:ipat_name,
+			patient_sex = :pat_sex:ipat_sex,
+			patient_age = :pat_age:ipat_age,
+			doctor_id = :doc_id:idoc_id	
+		WHERE
+			patient_id = :pat_id;
+	EXEC SQL COMMIT WORK;
+	printf("\n수정 완료!\n");
+}
+//---------------------------------------------------------------------------------------------------------------환자
+
+
+void DB_connect() {//-------------------------------------------------오라클 DB 연결
+   strcpy((char *)uid.arr, "zstA6@//sedb.deu.ac.kr:1521/orcl");
+   uid.len = (short) strlen((char *)uid.arr);
+   strcpy((char *)pwd.arr, "duck5895");
+   pwd.len = (short) strlen((char *)pwd.arr);
+   
+   EXEC SQL CONNECT :uid IDENTIFIED BY :pwd;
+
+   if(sqlca.sqlcode != 0 && sqlca.sqlcode != -1405) { //connect
+      printf("\7Connect error: %s ",sqlca.sqlerrm.sqlerrmc);
+      getch(); 
+      exit(-1);
+   }
+   printf("\nOracle Connect SUCCESS by %s\n", uid.arr);
+}
+
+void sql_error(char *msg) {//-------------------------------------------------sql 에러 처리
+   char err_msg[128];      size_t buf_len, msg_len;
+   EXEC SQL WHENEVER SQLERROR CONTINUE;
+   printf("\n%s\n",msg);      
+   buf_len = sizeof(err_msg);
+   sqlglm(err_msg, &buf_len, &msg_len);   
+   printf("%.*s\n",msg_len,err_msg);
+   getch();
+   EXEC SQL ROLLBACK WORK;
+   exit(-1);
+}
